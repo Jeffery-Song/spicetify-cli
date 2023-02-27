@@ -1,3 +1,13 @@
+A private fork of spicetify with comparative translation:
+<p align="center">
+<img src=".github/assets/popup_tr.jpg" alt="img" align="center" height="200px">  
+</p>
+<p align="center">
+<img src=".github/assets/lyrics_plus_tr.jpg" alt="img" align="center" height="300px">  
+</p>
+
+---
+
 <h3 align="center"><a href="https://spicetify.app/"><img src="https://i.imgur.com/iwcLITQ.png" width="600px"></a></h3>
 <p align="center">
   <a href="https://goreportcard.com/report/github.com/spicetify/spicetify-cli"><img src="https://goreportcard.com/badge/github.com/spicetify/spicetify-cli"></a>
