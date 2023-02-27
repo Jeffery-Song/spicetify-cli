@@ -185,14 +185,18 @@ function PopupLyrics() {
 				return { error: "No lyrics" };
 			}
 			lyricStr = lyricStr.lyric;
+			const trLyricStr = meta?.tlyric?.lyric;
+			console.log(lyricStr);
+			console.log(trLyricStr);
 
+			function handleLyc(lyricStr) {
 			const otherInfoKeys = [
 				"作?\\s*词|作?\\s*曲|编\\s*曲?|监\\s*制?",
-				".*编写|.*和音|.*和声|.*合声|.*提琴|.*录|.*工程|.*工作室|.*设计|.*剪辑|.*制作|.*发行|.*出品|.*后期|.*混音|.*缩混",
+				".*編曲|.*编写|.*和音|.*和声|.*合声|.*提琴|.*录|.*工程|.*工作室|.*设计|.*剪辑|.*制作|.*发行|.*出品|.*后期|.*混音|.*缩混",
 				"原唱|翻唱|题字|文案|海报|古筝|二胡|钢琴|吉他|贝斯|笛子|鼓|弦乐",
 				"lrc|publish|vocal|guitar|program|produce|write"
 			];
-			const otherInfoRegexp = new RegExp(`^(${otherInfoKeys.join("|")}).*(:|：)`, "i");
+			const otherInfoRegexp = new RegExp(`^(${otherInfoKeys.join("|")}).*(:|：|∶)`, "i");
 
 			const lines = lyricStr.split(/\r?\n/).map(line => line.trim());
 			const lyrics = lines
@@ -219,7 +223,7 @@ function PopupLyrics() {
 						const [min, sec] = [parseFloat(key), parseFloat(value)];
 						if (!isNaN(min) && !otherInfoRegexp.test(text)) {
 							result.startTime = min * 60 + sec;
-							result.text = text || "♪";
+							result.text = text || "";
 						}
 						return result;
 					});
@@ -235,6 +239,7 @@ function PopupLyrics() {
 					return a.startTime - b.startTime;
 				})
 				.filter(({ text }, index, arr) => {
+					if (text == null || text == "") return false;
 					if (index) {
 						const prevEle = arr[index - 1];
 						if (prevEle.text === text && text === "") {
@@ -243,12 +248,40 @@ function PopupLyrics() {
 					}
 					return true;
 				});
+			return lyrics;
+			};
 
+			function combine(sync, tr) {
+				if (!tr || !sync) {
+					return sync;
+				}
+				if (sync.length != tr.length) {
+					sync.unshift({startTime: 0, text: "MisMatch tr and org!"});
+					return sync;
+				}
+				const rst = [];
+				for (let i = 0; i < sync.length; i += 1) {
+					rst.push({
+						startTime: sync[i].startTime,
+						text: sync[i].text,
+						trText: tr[i].text
+					});
+				}
+				return rst;
+			};
+
+
+			const lyrics = handleLyc(lyricStr);
+			
 			if (!lyrics.length) {
 				return { error: "No synced lyrics" };
 			}
+			
+			const trLyrics = trLyricStr ? handleLyc(trLyricStr) : null;
+			
+			const combined = combine(lyrics, trLyrics);
 
-			return { lyrics };
+			return { lyrics : combined };
 		}
 	}
 
@@ -392,6 +425,7 @@ function PopupLyrics() {
 			try {
 				const data = await service.call(info);
 				console.log(data);
+				if (data.error != null) {continue;}
 				sharedData = data;
 				return;
 			} catch (err) {
@@ -426,24 +460,36 @@ function PopupLyrics() {
 		return result;
 	}
 
-	function drawParagraph(ctx, str = "", options) {
+	function drawParagraph(ctx, str = "", options, side_str = "") {
 		let actualWidth = 0;
 		const maxWidth = ctx.canvas.width - options.left - options.right;
-		const words = getWords(str);
+		const old_font = ctx.font;
+		const small_font = `bold ${userConfigs.fontSize*0.7}px ${userConfigs.fontFamily}, sans-serif`;
+		const orig_words = getWords(str);
+		const orig_split_idx = orig_words.length;
+		if (side_str == null) {side_str = "";}
+		const words = orig_words.concat(getWords(side_str));
+		// const words = orig_words;
 		const lines = [];
 		const measures = [];
 		let tempLine = "";
 		let textMeasures = ctx.measureText("");
+		let lines_splid_idx = null;
 		for (let i = 0; i < words.length; i++) {
 			const word = words[i];
 			const line = tempLine + word;
 			const mea = ctx.measureText(line);
 			const isSpace = /\s/.test(word);
-			if (mea.width > maxWidth && tempLine && !isSpace) {
+			if (mea.width > maxWidth && tempLine && !isSpace || i == orig_split_idx) {
 				actualWidth = Math.max(actualWidth, textMeasures.width);
 				lines.push(tempLine);
 				measures.push(textMeasures);
 				tempLine = word;
+				textMeasures = ctx.measureText(tempLine);
+					if (i == orig_split_idx) {
+					ctx.font = small_font;
+					lines_splid_idx = lines.length
+				}
 			} else {
 				tempLine = line;
 				if (!isSpace) {
@@ -456,7 +502,8 @@ function PopupLyrics() {
 			lines.push(tempLine);
 			measures.push(ctx.measureText(tempLine));
 		}
-
+		if (lines_splid_idx == null) lines_splid_idx = lines.length;
+		ctx.font = old_font;
 		const ascent = measures.length ? measures[0].actualBoundingBoxAscent : 0;
 		const body = measures.length ? options.lineHeight * (measures.length - 1) : 0;
 		const descent = measures.length ? measures[measures.length - 1].actualBoundingBoxDescent : 0;
@@ -495,9 +542,13 @@ function PopupLyrics() {
 		if (!options.measure) {
 			lines.forEach((str, index) => {
 				const x = options.hCenter ? (ctx.canvas.width - measures[index].width) / 2 : startX;
+				if (index == lines_splid_idx) {
+					ctx.font = small_font;
+				}
 				ctx.fillText(str, x, startY + index * options.lineHeight + translateY);
 			});
 		}
+		ctx.font = old_font;
 		return {
 			width: actualWidth,
 			height: actualHeight,
@@ -594,7 +645,8 @@ function PopupLyrics() {
 		const hCenter = userConfigs.centerAlign;
 		const fontFamily = `${userConfigs.fontFamily}, sans-serif`;
 
-		let currentIndex = -1;
+		// let currentIndex = -1;
+		let currentIndex = 0;
 		let progress = 1;
 		lyrics.forEach(({ startTime }, index) => {
 			if (startTime && currentTime > startTime - animateDuration) {
@@ -639,7 +691,7 @@ function PopupLyrics() {
 			right: marginWidth,
 			lineHeight: focusLineFontSize,
 			measure: true
-		}).height;
+		}, lyrics[currentIndex - 1]?.trText).height;
 
 		const pos = drawParagraph(offscreenCtx, lyrics[currentIndex].text, {
 			vCenter: true,
@@ -648,7 +700,7 @@ function PopupLyrics() {
 			right: progressRight,
 			lineHeight: fLineHeight,
 			translateY: selfHeight => ((prevLineFocusHeight + selfHeight) / 2 + focusLineMargin) * (1 - progress)
-		});
+		}, lyrics[currentIndex].trText);
 		// offscreenCtx.strokeRect(pos.left, pos.top, pos.width, pos.height);
 
 		// prev line
@@ -669,7 +721,7 @@ function PopupLyrics() {
 				left: marginWidth,
 				right: i === 0 ? marginWidth + progress * (otherRight - marginWidth) : otherRight,
 				lineHeight: i === 0 ? otherLineHeight + (1 - progress) * (focusLineHeight - otherLineHeight) : otherLineHeight
-			});
+			}, lyrics[currentIndex - 1 - i].trText);
 			if (lastBeforePos.top < 0) break;
 		}
 		// next line
@@ -683,7 +735,7 @@ function PopupLyrics() {
 				left: marginWidth,
 				right: otherRight,
 				lineHeight: otherLineHeight
-			});
+			}, lyrics[i].trText);
 			if (lastAfterPos.bottom > ctx.canvas.height) break;
 		}
 
