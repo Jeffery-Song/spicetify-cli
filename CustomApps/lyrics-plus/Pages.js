@@ -393,7 +393,7 @@ const SyncedExpandedLyricsPage = react.memo(({ lyrics, provider, copyright, isKa
 		react.createElement("p", {
 			className: "lyrics-lyricsContainer-LyricsUnsyncedPadding"
 		}),
-		padded.map(({ text, startTime }, i) => {
+		padded.map(({ text, startTime, trText }, i) => {
 			if (i == 0) {
 				return react.createElement(IdlingIndicator, {
 					isActive: activeLineIndex == 0,
@@ -403,6 +403,20 @@ const SyncedExpandedLyricsPage = react.memo(({ lyrics, provider, copyright, isKa
 			}
 
 			const isActive = i == activeLineIndex;
+			// console.log(text);
+			// console.log(trText);
+			function smaller(txt) {
+				if (txt == null) { return null; }
+				return react.createElement("p", null, 
+					react.createElement("small", null, 
+						react.createElement("small", null, 
+							// react.createElement("small", null, 
+								txt
+							// )
+						)
+					)
+				);
+			};
 			return react.createElement(
 				"p",
 				{
@@ -423,7 +437,7 @@ const SyncedExpandedLyricsPage = react.memo(({ lyrics, provider, copyright, isKa
 							.catch(() => Spicetify.showNotification("Failed to copy lyrics to clipboard"));
 					}
 				},
-				!isKara ? text : react.createElement(KaraokeLine, { text, startTime, position, isActive })
+				!isKara ? [react.createElement("p", null, text), smaller(trText)] : react.createElement(KaraokeLine, { text, startTime, position, isActive })
 			);
 		}),
 		react.createElement("p", {

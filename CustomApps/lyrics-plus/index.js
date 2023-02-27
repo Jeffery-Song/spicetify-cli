@@ -297,7 +297,8 @@ class LyricsContainer extends react.Component {
 				for (let i = 0; i < lyricsToTranslate.length; i++)
 					this.state[params[2]].push({
 						startTime: lyricsToTranslate[i].startTime || 0,
-						text: Utils.rubyTextToReact(translatedLines[i])
+						text: Utils.rubyTextToReact(translatedLines[i]),
+						trText: lyricsToTranslate[i].trText || ""
 					});
 				lyricContainerUpdate && lyricContainerUpdate();
 			})
@@ -341,11 +342,7 @@ class LyricsContainer extends react.Component {
 	}
 
 	parseLocalLyrics(lyrics) {
-		// Preprocess lyrics by removing [tags] and empty lines
-		const lines = lyrics
-			.replaceAll(/\[[a-zA-Z]+:.+\]/g, "")
-			.trim()
-			.split("\n");
+		const lines = lyrics.trim().split("\n");
 		const isSynced = lines[0].match(/\[([0-9:.]+)\]/);
 		const unsynced = [];
 		const synced = isSynced ? [] : null;

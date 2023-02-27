@@ -25,11 +25,11 @@ const ProviderNetease = (function () {
 
 	const creditInfo = [
 		"\\s?作?\\s*词|\\s?作?\\s*曲|\\s?编\\s*曲?|\\s?监\\s*制?",
-		".*编写|.*和音|.*和声|.*合声|.*提琴|.*录|.*工程|.*工作室|.*设计|.*剪辑|.*制作|.*发行|.*出品|.*后期|.*混音|.*缩混",
+		".*編曲|.*编写|.*和音|.*和声|.*合声|.*提琴|.*录|.*工程|.*工作室|.*设计|.*剪辑|.*制作|.*发行|.*出品|.*后期|.*混音|.*缩混",
 		"原唱|翻唱|题字|文案|海报|古筝|二胡|钢琴|吉他|贝斯|笛子|鼓|弦乐",
 		"lrc|publish|vocal|guitar|program|produce|write"
 	];
-	const creditInfoRegExp = new RegExp(`^(${creditInfo.join("|")}).*(:|：)`, "i");
+	const creditInfoRegExp = new RegExp(`^(${creditInfo.join("|")}).*(:|：|∶)`, "i");
 
 	function containCredits(text) {
 		return creditInfoRegExp.test(text);
@@ -178,6 +178,26 @@ const ProviderNetease = (function () {
 		return translation;
 	}
 
+	function combine(sync, tr) {
+		if (!tr || !sync) {
+			return sync;
+		}
+		if (sync.length != tr.length) {
+			sync.unshift({startTime: 0, text: "MisMatch tr and org!"});
+			console.log(sync, tr);
+			return sync;
+		}
+		const rst = [];
+		for (let i = 0; i < sync.length; i += 1) {
+			rst.push({
+				startTime: sync[i].startTime,
+				text: sync[i].text,
+				trText: tr[i].text
+			});
+		}
+		return rst;
+	}
+
 	function getUnsynced(list) {
 		const lyricStr = list?.lrc?.lyric;
 		let isInstrumental = false;
@@ -209,5 +229,5 @@ const ProviderNetease = (function () {
 		return lyrics;
 	}
 
-	return { findLyrics, getKaraoke, getSynced, getUnsynced, getTranslation };
+	return { findLyrics, getKaraoke, getSynced, getUnsynced, getTranslation, combine };
 })();

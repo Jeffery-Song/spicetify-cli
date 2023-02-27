@@ -110,6 +110,7 @@ const Providers = {
 		const translation = ProviderNetease.getTranslation(list);
 		if (translation) {
 			result.neteaseTranslation = translation;
+			result.synced = ProviderNetease.combine(result.synced, result.neteaseTranslation);
 		}
 
 		return result;
